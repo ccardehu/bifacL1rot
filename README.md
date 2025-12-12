@@ -17,7 +17,7 @@ devtools::install_github("ccardehu/bifacL1rot")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+This is a basic example:
 
 ``` r
 set.seed(1234)
