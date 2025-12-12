@@ -27,7 +27,7 @@ A[,2] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25) # Sparse second-order factors
 A[,3] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
 A[,4] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
 # Create rotation matrix (via random matrix):
-Ah =  array(rnorm(length(A), sd = .5), dim = dim(A))
+Ah =  array(rnorm(length(A), sd = .1), dim = dim(A))
 Tr = eigen(t(Ah) %*% Ah)$vectors
 Ah = (A)%*%(Tr)
 res = bifacL1rot::bifactorL1(Ah)
