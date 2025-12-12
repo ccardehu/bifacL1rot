@@ -8,6 +8,14 @@
 \description{
 Implements a factor loading rotation for sparse bi-factor models using an augmented Lagrangian optimization approach with L1 penalties.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/ccardehu/bifacL1rot}
+  \item Report bugs at \url{https://github.com/ccardehu/bifacL1rot/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Camilo A. Cárdenas-Hurtado \email{c.a.cardenas-hurtado@lse.ac.uk} (\href{https://orcid.org/0009-0003-1073-0912}{ORCID})
 
