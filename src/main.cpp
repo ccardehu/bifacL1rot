@@ -70,9 +70,8 @@ void ProxL(arma::mat& R) {
     R.each_col() /= row_norms;
 }
 
-//' @export
-// [[Rcpp::export]]
-void fixB(arma::mat& B, arma::mat& R) {
+void fixB_internal(arma::mat& B,
+                   arma::mat& R) {
     arma::vec signs(B.n_cols);
     for (arma::uword i = 0; i < B.n_cols; ++i) {
         arma::uword max_idx = arma::abs(B.col(i)).index_max();
@@ -89,6 +88,32 @@ void fixB(arma::mat& B, arma::mat& R) {
     R.diag().ones();
     if(arma::all(signs > 0.0)) R = arma::abs(R);
 }
+
+//' Fix sign indeterminacy in factor loadings
+//'
+//' @param B Loading matrix (modified in place)
+//' @param R_ Optional correlation matrix (modified in place). Defaults to identity.
+//' @export
+// [[Rcpp::export]]
+ void fixB(arma::mat& B,
+           Rcpp::Nullable<arma::mat> R_) {
+     arma::mat R = R_.isNotNull() ? Rcpp::as<arma::mat>(R_) : arma::eye(B.n_cols, B.n_cols);
+     arma::vec signs(B.n_cols);
+     for (arma::uword i = 0; i < B.n_cols; ++i) {
+         arma::uword max_idx = arma::abs(B.col(i)).index_max();
+         signs(i) = (B(max_idx, i) >= 0) ? 1.0 : -1.0;
+         B.col(i) *= signs(i);
+     }
+
+     for (arma::uword i = 0; i < R.n_cols; ++i) {
+         for (arma::uword j = i; j < R.n_rows; ++j) {
+             R(j, i) *= signs(i) * signs(j);
+             R(i, j) = R(j, i);
+         }
+     }
+     R.diag().ones();
+     if(arma::all(signs > 0.0)) R = arma::abs(R);
+ }
 
 void fixPhi(arma::mat& Phi) {
     Phi.row(0).zeros();
@@ -278,7 +303,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
     }
 
     // Final sign fixing
-    fixB(B, Phi);
+    fixB_internal(B, Phi);
 
     if (verbose) {
         Rcpp::Rcout << "\r L2-norm(B) (outer iter: " << i

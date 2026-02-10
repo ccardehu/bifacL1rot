@@ -12,13 +12,13 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // fixB
-void fixB(arma::mat& B, arma::mat& R);
-RcppExport SEXP _bifacL1rot_fixB(SEXP BSEXP, SEXP RSEXP) {
+void fixB(arma::mat& B, Rcpp::Nullable<arma::mat> R_);
+RcppExport SEXP _bifacL1rot_fixB(SEXP BSEXP, SEXP R_SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type B(BSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
-    fixB(B, R);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<arma::mat> >::type R_(R_SEXP);
+    fixB(B, R_);
     return R_NilValue;
 END_RCPP
 }
