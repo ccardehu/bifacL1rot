@@ -20,7 +20,10 @@
 #' \itemize{
 #'   \item \code{B} - Estimated factor loading matrix (follows a bi-factor structure)
 #'   \item \code{Phi} - Estimated factor correlation matrix (follows a bi-factor structure)
+#'   \item \code{L1.end} - L1-norm for rotated solution B
+#'   \item \code{cons.end} - Value of the constraint at solution B
 #'   \item \code{rho.end} - Final value of rho
+#'   \item \code{outer.iter.end} - Number of outer iterations at convergence
 #'   \item \code{conv} - Logical; TRUE if converged before maxit.ou
 #' }
 #'
