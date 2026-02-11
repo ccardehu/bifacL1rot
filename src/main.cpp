@@ -96,8 +96,8 @@ void fixB_internal(arma::mat& B,
 //' @export
 // [[Rcpp::export]]
  void fixB(arma::mat& B,
-           Rcpp::Nullable<arma::mat> R_) {
-     arma::mat R = R_.isNotNull() ? Rcpp::as<arma::mat>(R_) : arma::eye(B.n_cols, B.n_cols);
+           Rcpp::Nullable<Rcpp::NumericMatrix> R_) {
+
      arma::vec signs(B.n_cols);
      for (arma::uword i = 0; i < B.n_cols; ++i) {
          arma::uword max_idx = arma::abs(B.col(i)).index_max();
@@ -105,14 +105,20 @@ void fixB_internal(arma::mat& B,
          B.col(i) *= signs(i);
      }
 
-     for (arma::uword i = 0; i < R.n_cols; ++i) {
-         for (arma::uword j = i; j < R.n_rows; ++j) {
-             R(j, i) *= signs(i) * signs(j);
-             R(i, j) = R(j, i);
+
+     if(R_.isNotNull()) {
+         Rcpp::NumericMatrix Rmat(R_.get());
+         arma::mat R(Rmat.begin(), Rmat.nrow(), Rmat.ncol(), false, true);
+
+         for (arma::uword i = 0; i < R.n_cols; ++i) {
+             for (arma::uword j = i; j < R.n_rows; ++j) {
+                 R(j, i) *= signs(i) * signs(j);
+                 R(i, j) = R(j, i);
+             }
          }
+         R.diag().ones();
+         if (arma::all(signs > 0.0)) R = arma::abs(R);
      }
-     R.diag().ones();
-     if(arma::all(signs > 0.0)) R = arma::abs(R);
  }
 
 void fixPhi(arma::mat& Phi) {
@@ -180,6 +186,7 @@ arma::mat commutation_matrix(int p, int q) {
 
 // [[Rcpp::export]]
 Rcpp::List ALM_cpp(arma::mat& A,
+                   Rcpp::Nullable<arma::mat> Phi0_ = R_NilValue,
                    Rcpp::Nullable<arma::mat> Bstart_ = R_NilValue,
                    Rcpp::Nullable<arma::mat> Phi_ = R_NilValue,
                    double rho = 1.0, double t = 0.001,
@@ -194,6 +201,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
     if (c2 <= 0.0 || c2 >= 1.0) Rcpp::stop("Fix c2 argument, must be 0 < c2 < 1");
 
     // Initialization of B and Phi
+    arma::mat Phi0 = Phi0_.isNotNull() ? Rcpp::as<arma::mat>(Phi0_) : arma::eye(A.n_cols, A.n_cols);
     arma::mat B = Bstart_.isNotNull() ? Rcpp::as<arma::mat>(Bstart_) : A;
     arma::mat Phi = Phi_.isNotNull() ? Rcpp::as<arma::mat>(Phi_) : arma::eye(B.n_cols, B.n_cols);
     fixPhi(Phi);
@@ -207,7 +215,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
     int NP = static_cast<int>(B.n_elem) + NR;
 
     arma::mat Kpq = commutation_matrix(B.n_rows, B.n_cols);
-    const arma::mat AAt = A * A.t();
+    const arma::mat AAt = A * Phi0 * A.t();
 
     double outn = arma::accu(arma::abs(B));
     if (verbose) {

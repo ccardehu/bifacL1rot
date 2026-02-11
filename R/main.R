@@ -1,6 +1,7 @@
 #' L1 rotation for Generalized Bi-factor Models
 #'
 #' @param A Input factor loading matrix (p x q)
+#' @param Phi0 Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.
 #' @param Bstart Optional starting value for B matrix. Defaults to A.
 #'   Ignored when \code{nstart > 1}.
 #' @param Phi Optional starting correlation matrix. Defaults to identity.
@@ -61,7 +62,7 @@
 #' @export
 #' @useDynLib bifacL1rot, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
-bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
+bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
                 maxit.ou = 5000, maxit.in = 300, orthogonal = FALSE,
                 tol1 = 1e-6, tol2 = 1e-4, verbose = TRUE, v.every = 10L,
                 Lmax = 20, c1 = 1.05, c2 = 0.25,
@@ -69,6 +70,7 @@ bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
 
     # Input validation
     if (!is.matrix(A)) A <- as.matrix(A)
+    if (!is.null(Phi0) && !is.matrix(Phi0)) Phi0 <- as.matrix(Phi0)
     if (!is.null(Bstart) && !is.matrix(Bstart)) Bstart <- as.matrix(Bstart)
     if (!is.null(Phi) && !is.matrix(Phi)) Phi <- as.matrix(Phi)
 
@@ -76,7 +78,6 @@ bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
     maxit.in = as.integer(maxit.in)
     v.every = as.integer(v.every)
     nstart = as.integer(nstart)
-    ncores = as.integer(ncores)
     if (nstart < 1L) stop("nstart must be >= 1")
 
     # Auto-detect cores when nstart > 1 and ncores not specified
@@ -95,6 +96,7 @@ bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
     if (nstart == 1L) {
         result <- ALM_cpp(
             A = A,
+            Phi0_ = Phi0,
             Bstart_ = Bstart,
             Phi_ = Phi,
             rho = rho,
@@ -136,6 +138,7 @@ bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
         Bs = make_Bstart(A, seed_i)
         ALM_cpp(
             A = A,
+            Phi0_ = Phi0,
             Bstart_ = Bs,
             Phi_ = Phi,
             rho = rho,
@@ -163,7 +166,7 @@ bifactorL1 <- function(A, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
         old_plan = future::plan()
         on.exit(future::plan(old_plan), add = TRUE)
         future::plan(future::multisession, workers = ncores)
-        results = future.apply::future_lapply(seeds, run_one, future.seed = FALSE)
+        results = future.apply::future_lapply(seeds, run_one, future.seed = NULL) # future.seed = FALSE
     } else {
         results = lapply(seeds, run_one)
     }

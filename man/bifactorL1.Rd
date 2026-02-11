@@ -6,6 +6,7 @@
 \usage{
 bifactorL1(
   A,
+  Phi0 = NULL,
   Bstart = NULL,
   Phi = NULL,
   rho = 1,
@@ -27,6 +28,8 @@ bifactorL1(
 }
 \arguments{
 \item{A}{Input factor loading matrix (p x q)}
+
+\item{Phi0}{Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.}
 
 \item{Bstart}{Optional starting value for B matrix. Defaults to A.
 Ignored when \code{nstart > 1}.}
