@@ -120,8 +120,9 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
     }
 
     # --- Multiple random starts ---
-    if (!is.null(Bstart)) {
-        warning("Bstart is ignored when nstart > 1; random rotations of A are used instead.")
+    if (is.null(Bstart)) {
+        warning("Bstart is NULL; random rotations of A are used instead.")
+        BStart = A
     }
 
     # Pre-generate seeds for reproducibility
@@ -138,7 +139,7 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
 
     # Worker function for a single start
     run_one = function(seed_i) {
-        Bs = make_Bstart(A, seed_i)
+        Bs = make_Bstart(Bstart, seed_i)
         ALM_cpp(
             A = A,
             Phi0_ = Phi0,
