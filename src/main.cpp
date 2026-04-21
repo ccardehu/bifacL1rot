@@ -88,15 +88,6 @@ arma::mat prox_LpOneHalf(arma::mat X, arma::vec lambda){
     arma::mat out = (2.0 / 3.0) * X % (1.0 + arma::cos((2.0 / 3.0) * arma::acos(arg_mat)));
     return out % fix_mat;
 
-        // arma::mat out(arma::size(X));
-    // for(arma::uword j = 0; j < X.n_cols; j++){
-    //     for(arma::uword i = 0; i < X.n_rows; i++){
-    //         double tmp1 = X(i,j);
-    //         double tmp2 = lam_mat(i,j);
-    //         out(i,j) = LpOneHalf(tmp1, tmp2);
-    //     }
-    // }
-    // return out;
 }
 
 // double LpTwoThirds(double x, double lam){
@@ -152,16 +143,58 @@ arma::mat prox_LpTwoThirds(arma::mat X, arma::vec lambda){
     arma::mat out = arma::sign(X) % arma::pow(val, 3.0) / 8.0;
 
     return out % fix_mat;
+}
 
-    // arma::mat out(arma::size(X));
-    // for(arma::uword j = 0; j < X.n_cols; j++){
-    //     for(arma::uword i = 0; i < X.n_rows; i++){
-    //         double tmp1 = X(i,j);
-    //         double tmp2 = lam_mat(i,j);
-    //         out(i,j) = LpTwoThirds(tmp1, tmp2);
-    //     }
-    // }
-    // return out;
+arma::mat prox_LpGeneral(arma::mat X, arma::vec lambda, double p, double eps = 1e-6){
+    arma::mat lam_mat = arma::reshape(lambda, X.n_rows, X.n_cols);
+    arma::mat abs_X = arma::abs(X);
+    double exp_inv = 1.0 / (2.0 - p);
+
+    // Threshold: tau_{C,p} = ((2-p) / (2(1-p))) * (2*C*(1-p))^{1/(2-p)}
+    arma::mat tau_mat = ((2.0 - p) / (2.0 * (1.0 - p))) *
+        arma::pow(2.0 * lam_mat * (1.0 - p), exp_inv);
+
+    // Mask: 1 where |x| > threshold, 0 otherwise (returns 0)
+    arma::mat fix_mat = arma::conv_to<arma::mat>::from(abs_X > tau_mat);
+
+    // --- Initialise bisection interval [a, b] ---
+    // a = (C*p*(1-p))^{1/(2-p)}  if |x| < C + 1  (Lemma 3.1)
+    //     |x| - C                if |x| >= C + 1  (Lemma 3.2)
+    arma::mat a_small = arma::pow(lam_mat * p * (1.0 - p), exp_inv);
+    arma::mat a_large = abs_X - lam_mat;
+    arma::mat use_large = arma::conv_to<arma::mat>::from(abs_X >= lam_mat + 1.0);
+    arma::mat a = (1.0 - use_large) % a_small + use_large % a_large;
+
+    // b = |x|
+    arma::mat b = abs_X;
+
+    // J'_tau(t) = t + C*p*t^{p-1} - |tau|
+    // Evaluate at left endpoint
+    arma::mat Ja = a + lam_mat * p % arma::pow(a, p - 1.0) - abs_X;
+
+    // Fixed number of bisection iterations
+    // From Theorem 3.1: error < (C_max + 1) / 2^{n+1}
+    double max_lam = lam_mat.max();
+    int n_iter = std::max(1, (int)std::ceil(std::log2((max_lam + 1.0) / eps)));
+
+    // --- Bisection loop (all elements simultaneously) ---
+    arma::mat c(arma::size(X));
+    for (int iter = 0; iter < n_iter; iter++) {
+        c = (a + b) / 2.0;
+        arma::mat Jc = c + lam_mat * p % arma::pow(c, p - 1.0) - abs_X;
+
+        // Where Ja and Jc have opposite signs: root in [a, c] -> update b
+        // Otherwise: root in [c, b] -> update a
+        arma::mat move_left = arma::conv_to<arma::mat>::from((Ja % Jc) < 0.0);
+
+        b = move_left % c + (1.0 - move_left) % b;
+        a = (1.0 - move_left) % c + move_left % a;
+        Ja = (1.0 - move_left) % Jc + move_left % Ja;
+    }
+    c = (a + b) / 2.0;
+
+    // Restore sign and zero out sub-threshold entries
+    return arma::sign(X) % c % fix_mat;
 }
 
 
@@ -325,6 +358,8 @@ Rcpp::List ALM_cpp(arma::mat& A,
 
     int i = 0, j = 0;
 
+    if(p != 1.0 | p != 0.5 | p != 0.66) hesit = maxit_ou + 100;
+
     for (i = 1; i <= maxit_ou; ++i) {
         if (i % 10 == 0) Rcpp::checkUserInterrupt();
         double tB = t;
@@ -366,7 +401,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
             } else if (p == 0.66){
                 Bn.cols(1, Bn.n_cols - 1) = prox_LpTwoThirds(B_rest, tB * ihess_rest);
             } else {
-                Rcpp::stop("Check value of p");
+                Bn.cols(1, Bn.n_cols - 1) = prox_LpGeneral(B_rest, tB * ihess_rest, p, tol2);
             }
 
             if (!Bn.is_finite()) {

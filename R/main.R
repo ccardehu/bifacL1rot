@@ -139,28 +139,34 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
     }
 
     # Worker function for a single start
-    run_one = function(seed_i) {
-        Bs = make_Bstart(Bstart, seed_i)
-        ALM_cpp(
-            A = A,
-            Phi0_ = Phi0,
-            Bstart_ = Bs,
-            Phi_ = Phi,
-            rho = rho,
-            t = t,
-            maxit_ou = maxit.ou,
-            maxit_in = maxit.in,
-            hesit = hesit,
-            orthogonal = orthogonal,
-            tol1 = tol1,
-            tol2 = tol2,
-            verbose = FALSE,
-            v_every = v.every,
-            Lmax = Lmax,
-            c1 = c1,
-            c2 = c2,
-            p = p
-        )
+    run_one = function(seed_i){
+        tryCatch({
+            Bs = make_Bstart(Bstart, seed_i)
+            ALM_cpp(
+                A = A,
+                Phi0_ = Phi0,
+                Bstart_ = Bs,
+                Phi_ = Phi,
+                rho = rho,
+                t = t,
+                maxit_ou = maxit.ou,
+                maxit_in = maxit.in,
+                hesit = hesit,
+                orthogonal = orthogonal,
+                tol1 = tol1,
+                tol2 = tol2,
+                verbose = FALSE,
+                v_every = v.every,
+                Lmax = Lmax,
+                c1 = c1,
+                c2 = c2,
+                p = p
+            )
+        },
+        error = function(e) {
+            warning(sprintf("Seed %d failed: %s", seed_i, conditionMessage(e)))
+            return(NULL)
+        })
     }
 
     # Run starts (parallel or sequential)
@@ -176,6 +182,11 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
         results = future.apply::future_lapply(seeds, run_one, future.seed = NULL) # future.seed = FALSE
     } else {
         results = lapply(seeds, run_one)
+    }
+
+    results = Filter(Negate(is.null), results)
+    if (length(results) == 0L) {
+        stop("All random starts failed.")
     }
 
     # Select best result (lowest objective)
