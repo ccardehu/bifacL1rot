@@ -1,23 +1,25 @@
-#' L1 rotation for Generalized Bi-factor Models
+#' Lp rotation for Generalized Bi-factor Models
 #'
-#' @param A Input factor loading matrix (p x q)
+#' @param A Input factor loading matrix (J x K)
 #' @param Phi0 Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.
 #' @param Bstart Optional starting value for B matrix. Defaults to A.
 #'   Ignored when \code{nstart > 1}.
 #' @param Phi Optional starting correlation matrix. Defaults to identity.
 #' @param rho Initial penalty parameter for augmented Lagrangian method. Default 1.
-#' @param t Initial step size. Default 1/1000.
+#' @param t Initial step size. Default 1e-3.
 #' @param maxit.ou Maximum outer iterations. Default 5000.
 #' @param maxit.in Maximum inner iterations. Default 300.
 #' @param hesit Iteration number to add Hessian information. Default 50.
 #' @param orthogonal Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.
 #' @param tol1 Convergence tolerance for parameter changes. Default 1e-6.
-#' @param tol2 Tolerance for backtracking line search. Default 1e-4.
+#' @param tol2 Tolerance for backtracking line search. Default 1e-6.
+#' @param tol3 Tolerance for constraint convergence check. Default 1e-4.
 #' @param verbose Logical; print progress. Default TRUE.
 #' @param v.every Print frequency (every v.every outer iterations). Default 10.
 #' @param Lmax Clipping bound for Lagrange multipliers. Default 20.
 #' @param c1 Multiplicative factor for rho increase (must be > 1). Default 1.05.
 #' @param c2 Threshold for rho update (must be in (0,1)). Default 0.25.
+#' @param p Exponent in Qp (must be in (0,1]). Closed form solutions for 1/2, 2/3, 1. Default 1.
 #' @param nstart Number of random starts. Default 1 (no random restarts).
 #'   When \code{nstart > 1}, each start uses a random orthogonal rotation of \code{A}
 #'   and the solution with the smallest objective value is returned.
@@ -30,11 +32,13 @@
 #' \itemize{
 #'   \item \code{B}: Estimated factor loading matrix (follows a bi-factor structure)
 #'   \item \code{Phi}: Estimated factor correlation matrix (follows a bi-factor structure)
-#'   \item \code{obj.end}: objective function evaluated at rotated solution B
-#'   \item \code{cons.end}: Value of the constraint at solution B
+#'   \item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
+#'   \item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
 #'   \item \code{rho.end}: Final value of rho
 #'   \item \code{outer.iter.end}: Number of outer iterations at convergence
 #'   \item \code{conv}: Logical; TRUE if converged before maxit.ou
+#'   \item \code{eps1}: Final value of convergence criterion (parameter difference)
+#'   \item \code{time}: Wall clock computation time (in seconds)
 #'   \item \code{nstart}: Number of random starts used
 #'   \item \code{all.obj}: Vector of objective values from all starts (only when \code{nstart > 1})
 #' }
@@ -49,8 +53,7 @@
 #' A[,4] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
 #'
 #' # Create rotation matrix (via random matrix):
-#' Ah =  array(rnorm(length(A), sd = .5), dim = dim(A))
-#' Tr = eigen(t(Ah) %*% Ah)$vectors
+#' Tr = Tr = qr.Q(qr(matrix(rnorm(ncol(A) * ncol(A)), ncol(A), ncol(A))))
 #' Ah = (A)%*%(Tr)
 #'
 #' # Single start
@@ -63,9 +66,9 @@
 #' @export
 #' @useDynLib bifacL1rot, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
-bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1/1000,
+bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1e-3,
                 maxit.ou = 5000, maxit.in = 300, hesit = 50, orthogonal = FALSE,
-                tol1 = 1e-6, tol2 = 1e-4, verbose = TRUE, v.every = 10L,
+                tol1 = 1e-6, tol2 = 1e-6, tol3 = 1e-4, verbose = TRUE, v.every = 10L,
                 Lmax = 20, c1 = 1.05, c2 = 0.25, p = 1,
                 nstart = 1L, seed = NULL, ncores = 1) {
 
@@ -109,6 +112,7 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
             orthogonal = orthogonal,
             tol1 = tol1,
             tol2 = tol2,
+            tol3 = tol3,
             verbose = verbose,
             v_every = v.every,
             Lmax = Lmax,
@@ -133,15 +137,24 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
     # Helper: generate one random start matrix
     make_Bstart = function(A, seed_i) {
         set.seed(seed_i)
-        noise = array(rnorm(length(A), sd = 0.1), dim = dim(A))
-        Tr = eigen(crossprod(noise), symmetric = TRUE)$vectors
+        K = ncol(A)
+        Z = matrix(rnorm(K * K), K, K)
+        qrZ = qr(Z)
+        Tr = qr.Q(qrZ)
+        # Sign-correction for Haar distribution
+        d = sign(diag(qr.R(qrZ)))
+        d[d == 0] = 1
+        Tr = Tr * rep(d, each = K)
         A %*% Tr
     }
 
+    # Pre-generate Starting matrices
+    Bstart_list = lapply(seeds, function(s) make_Bstart(Bstart, s))
+
     # Worker function for a single start
-    run_one = function(seed_i){
+    run_one = function(Bs){ # seed_i
         tryCatch({
-            Bs = make_Bstart(Bstart, seed_i)
+            # Bs = make_Bstart(Bstart, seed_i)
             ALM_cpp(
                 A = A,
                 Phi0_ = Phi0,
@@ -155,6 +168,7 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
                 orthogonal = orthogonal,
                 tol1 = tol1,
                 tol2 = tol2,
+                tol3 = tol3,
                 verbose = FALSE,
                 v_every = v.every,
                 Lmax = Lmax,
@@ -164,7 +178,8 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
             )
         },
         error = function(e) {
-            warning(sprintf("Seed %d failed: %s", seed_i, conditionMessage(e)))
+            # warning(sprintf("Seed %d failed: %s", seed_i, conditionMessage(e)))
+            warning(sprintf("Start failed: %s", conditionMessage(e)))
             return(NULL)
         })
     }
@@ -179,9 +194,11 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
         old_plan = future::plan()
         on.exit(future::plan(old_plan), add = TRUE)
         future::plan(future::multisession, workers = ncores)
-        results = future.apply::future_lapply(seeds, run_one, future.seed = NULL) # future.seed = FALSE
+        # results = future.apply::future_lapply(seeds, run_one, future.seed = FALSE) # future.seed = NULL
+        results = future.apply::future_lapply(Bstart_list, run_one, future.seed = NULL)
     } else {
-        results = lapply(seeds, run_one)
+        # results = lapply(seeds, run_one)
+        results = lapply(Bstart_list, run_one)
     }
 
     results = Filter(Negate(is.null), results)
@@ -189,7 +206,7 @@ bifactorL1 <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
         stop("All random starts failed.")
     }
 
-    # Select best result (lowest objective)
+    # Select best result (lowest objective; Qp)
     obj_vals = vapply(results, function(r) r$obj.end, numeric(1))
     best_idx = which.min(obj_vals)
     best = results[[best_idx]]

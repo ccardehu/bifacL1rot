@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{bifactorL1}
 \alias{bifactorL1}
-\title{L1 rotation for Generalized Bi-factor Models}
+\title{Lp rotation for Generalized Bi-factor Models}
 \usage{
 bifactorL1(
   A,
@@ -10,13 +10,14 @@ bifactorL1(
   Bstart = NULL,
   Phi = NULL,
   rho = 1,
-  t = 1/1000,
+  t = 0.001,
   maxit.ou = 5000,
   maxit.in = 300,
   hesit = 50,
   orthogonal = FALSE,
   tol1 = 1e-06,
-  tol2 = 1e-04,
+  tol2 = 1e-06,
+  tol3 = 1e-04,
   verbose = TRUE,
   v.every = 10L,
   Lmax = 20,
@@ -29,7 +30,7 @@ bifactorL1(
 )
 }
 \arguments{
-\item{A}{Input factor loading matrix (p x q)}
+\item{A}{Input factor loading matrix (J x K)}
 
 \item{Phi0}{Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.}
 
@@ -40,7 +41,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{rho}{Initial penalty parameter for augmented Lagrangian method. Default 1.}
 
-\item{t}{Initial step size. Default 1/1000.}
+\item{t}{Initial step size. Default 1e-3.}
 
 \item{maxit.ou}{Maximum outer iterations. Default 5000.}
 
@@ -52,7 +53,9 @@ Ignored when \code{nstart > 1}.}
 
 \item{tol1}{Convergence tolerance for parameter changes. Default 1e-6.}
 
-\item{tol2}{Tolerance for backtracking line search. Default 1e-4.}
+\item{tol2}{Tolerance for backtracking line search. Default 1e-6.}
+
+\item{tol3}{Tolerance for constraint convergence check. Default 1e-4.}
 
 \item{verbose}{Logical; print progress. Default TRUE.}
 
@@ -63,6 +66,8 @@ Ignored when \code{nstart > 1}.}
 \item{c1}{Multiplicative factor for rho increase (must be > 1). Default 1.05.}
 
 \item{c2}{Threshold for rho update (must be in (0,1)). Default 0.25.}
+
+\item{p}{Exponent in Qp (must be in (0,1]). Closed form solutions for 1/2, 2/3, 1. Default 1.}
 
 \item{nstart}{Number of random starts. Default 1 (no random restarts).
 When \code{nstart > 1}, each start uses a random orthogonal rotation of \code{A}
@@ -79,17 +84,19 @@ A list containing:
 \itemize{
 \item \code{B}: Estimated factor loading matrix (follows a bi-factor structure)
 \item \code{Phi}: Estimated factor correlation matrix (follows a bi-factor structure)
-\item \code{obj.end}: objective function evaluated at rotated solution B
-\item \code{cons.end}: Value of the constraint at solution B
+\item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
+\item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
 \item \code{rho.end}: Final value of rho
 \item \code{outer.iter.end}: Number of outer iterations at convergence
 \item \code{conv}: Logical; TRUE if converged before maxit.ou
+\item \code{eps1}: Final value of convergence criterion (parameter difference)
+\item \code{time}: Wall clock computation time (in seconds)
 \item \code{nstart}: Number of random starts used
 \item \code{all.obj}: Vector of objective values from all starts (only when \code{nstart > 1})
 }
 }
 \description{
-L1 rotation for Generalized Bi-factor Models
+Lp rotation for Generalized Bi-factor Models
 }
 \examples{
 \dontrun{
@@ -101,8 +108,7 @@ A[,3] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
 A[,4] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
 
 # Create rotation matrix (via random matrix):
-Ah =  array(rnorm(length(A), sd = .5), dim = dim(A))
-Tr = eigen(t(Ah) \%*\% Ah)$vectors
+Tr = Tr = qr.Q(qr(matrix(rnorm(ncol(A) * ncol(A)), ncol(A), ncol(A))))
 Ah = (A)\%*\%(Tr)
 
 # Single start
