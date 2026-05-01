@@ -9,11 +9,11 @@
 #' @param t Initial step size. Default 1e-3.
 #' @param maxit.ou Maximum outer iterations. Default 5000.
 #' @param maxit.in Maximum inner iterations. Default 300.
-#' @param hesit Iteration number to add Hessian information. Default 50.
+#' @param maxit.bt Maximum back-tracking iterations. Default 20.
+# #' @param hesit Iteration number to add Hessian information. Default 50.
 #' @param orthogonal Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.
-#' @param tol1 Convergence tolerance for parameter changes. Default 1e-6.
-#' @param tol2 Tolerance for backtracking line search. Default 1e-6.
-#' @param tol3 Tolerance for constraint convergence check. Default 1e-4.
+#' @param tol1 Convergence tolerance for successive parameter change. Default 1e-6.
+#' @param tol2 Convergence tolerance for constraint violation check. Default 1e-4.
 #' @param verbose Logical; print progress. Default TRUE.
 #' @param v.every Print frequency (every v.every outer iterations). Default 10.
 #' @param Lmax Clipping bound for Lagrange multipliers. Default 20.
@@ -35,12 +35,12 @@
 #'   \item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
 #'   \item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
 #'   \item \code{rho.end}: Final value of rho
-#'   \item \code{outer.iter.end}: Number of outer iterations at convergence
-#'   \item \code{conv}: Logical; TRUE if converged before maxit.ou
-#'   \item \code{eps1}: Final value of convergence criterion (parameter difference)
+#'   \item \code{iter.end}: Number of outer iterations at convergence
+#'   \item \code{converged}: Logical; TRUE if converged before maxit.ou
+#'   \item \code{tol.end}: Final value of convergence criterion (parameter difference)
 #'   \item \code{time}: Wall clock computation time (in seconds)
 #'   \item \code{nstart}: Number of random starts used
-#'   \item \code{all.obj}: Vector of objective values from all starts (only when \code{nstart > 1})
+#'   \item \code{all.obj}: Vector of objective values (Qp(B) + h(B,Phi)) from all starts (only when \code{nstart > 1})
 #' }
 #'
 #' @examples
@@ -66,10 +66,10 @@
 #' @export
 #' @useDynLib bifacLpRot, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
-bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1e-3,
-                maxit.ou = 5000, maxit.in = 300, #hesit = 50,
+bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 5, t = 1e-3,
+                maxit.ou = 5000, maxit.in = 300, maxit.bt = 20, #hesit = 50,
                 orthogonal = FALSE,
-                tol1 = 1e-6, tol2 = 1e-6, tol3 = 1e-4, verbose = TRUE, v.every = 10L,
+                tol1 = 1e-6, tol2 = 1e-4, verbose = TRUE, v.every = 10L,
                 Lmax = 20, c1 = 1.05, c2 = 0.25, p = 1,
                 nstart = 1L, seed = NULL, ncores = 1) {
 
@@ -81,6 +81,7 @@ bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
 
     maxit.ou = as.integer(maxit.ou)
     maxit.in = as.integer(maxit.in)
+    maxit.bt = as.integer(maxit.bt)
     # hesit = as.integer(hesit)
     v.every = as.integer(v.every)
     nstart = as.integer(nstart)
@@ -111,11 +112,11 @@ bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
             t = t,
             maxit_ou = maxit.ou,
             maxit_in = maxit.in,
+            maxit_bt = maxit.bt,
             # hesit = hesit,
             orthogonal = orthogonal,
             tol1 = tol1,
             tol2 = tol2,
-            tol3 = tol3,
             verbose = verbose,
             v_every = v.every,
             Lmax = Lmax,
@@ -167,11 +168,11 @@ bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 1, t = 1
                 t = t,
                 maxit_ou = maxit.ou,
                 maxit_in = maxit.in,
+                maxit_bt = maxit.bt,
                 # hesit = hesit,
                 orthogonal = orthogonal,
                 tol1 = tol1,
                 tol2 = tol2,
-                tol3 = tol3,
                 verbose = FALSE,
                 v_every = v.every,
                 Lmax = Lmax,

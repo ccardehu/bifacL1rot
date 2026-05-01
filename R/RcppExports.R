@@ -4,21 +4,17 @@
 #' Fix sign indeterminacy in factor loadings
 #'
 #' @param B Loading matrix (modified in place)
-#' @param R_ Optional correlation matrix (modified in place). Defaults to identity.
+#' @param R Optional correlation matrix (modified in place). Defaults to identity.
 #' @export
-fixB <- function(B, R_) {
-    invisible(.Call(`_bifacLpRot_fixB`, B, R_))
+fixB <- function(B, R) {
+    invisible(.Call(`_bifacLpRot_fixB`, B, R))
 }
 
 freeR <- function(R) {
     .Call(`_bifacLpRot_freeR`, R)
 }
 
-commutation_matrix <- function(p, q) {
-    .Call(`_bifacLpRot_commutation_matrix`, p, q)
-}
-
-ALM_cpp <- function(A, Phi0_ = NULL, Bstart_ = NULL, Phi_ = NULL, rho = 1.0, t = 1e-3, maxit_ou = 5000L, maxit_in = 300L, orthogonal = FALSE, tol1 = 1e-6, tol2 = 1e-6, tol3 = 1e-4, verbose = TRUE, v_every = 10L, Lmax = 20.0, c1 = 1.05, c2 = 0.25, p = 1) {
-    .Call(`_bifacLpRot_ALM_cpp`, A, Phi0_, Bstart_, Phi_, rho, t, maxit_ou, maxit_in, orthogonal, tol1, tol2, tol3, verbose, v_every, Lmax, c1, c2, p)
+ALM_cpp <- function(A, Phi0_ = NULL, Bstart_ = NULL, Phi_ = NULL, rho = 5.0, t = 1e-3, maxit_ou = 5000L, maxit_in = 300L, maxit_bt = 20L, orthogonal = FALSE, tol1 = 1e-6, tol2 = 1e-4, verbose = TRUE, v_every = 10L, Lmax = 20.0, c1 = 1.05, c2 = 0.25, p = 1) {
+    .Call(`_bifacLpRot_ALM_cpp`, A, Phi0_, Bstart_, Phi_, rho, t, maxit_ou, maxit_in, maxit_bt, orthogonal, tol1, tol2, verbose, v_every, Lmax, c1, c2, p)
 }
 

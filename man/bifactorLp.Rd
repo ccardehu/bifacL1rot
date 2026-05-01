@@ -9,14 +9,14 @@ bifactorLp(
   Phi0 = NULL,
   Bstart = NULL,
   Phi = NULL,
-  rho = 1,
+  rho = 5,
   t = 0.001,
   maxit.ou = 5000,
   maxit.in = 300,
+  maxit.bt = 20,
   orthogonal = FALSE,
   tol1 = 1e-06,
-  tol2 = 1e-06,
-  tol3 = 1e-04,
+  tol2 = 1e-04,
   verbose = TRUE,
   v.every = 10L,
   Lmax = 20,
@@ -46,13 +46,13 @@ Ignored when \code{nstart > 1}.}
 
 \item{maxit.in}{Maximum inner iterations. Default 300.}
 
+\item{maxit.bt}{Maximum back-tracking iterations. Default 20.}
+
 \item{orthogonal}{Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.}
 
-\item{tol1}{Convergence tolerance for parameter changes. Default 1e-6.}
+\item{tol1}{Convergence tolerance for successive parameter change. Default 1e-6.}
 
-\item{tol2}{Tolerance for backtracking line search. Default 1e-6.}
-
-\item{tol3}{Tolerance for constraint convergence check. Default 1e-4.}
+\item{tol2}{Convergence tolerance for constraint violation check. Default 1e-4.}
 
 \item{verbose}{Logical; print progress. Default TRUE.}
 
@@ -75,8 +75,6 @@ and the solution with the smallest objective value is returned.}
 \item{ncores}{Number of parallel workers. Default 1 (sequential).
 Requires the \code{future} and \code{future.apply} packages for \code{ncores > 1}.
 If NULL, defaults to \code{ncores = future::availableCores() - 2}.}
-
-\item{hesit}{Iteration number to add Hessian information. Default 50.}
 }
 \value{
 A list containing:
@@ -86,12 +84,12 @@ A list containing:
 \item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
 \item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
 \item \code{rho.end}: Final value of rho
-\item \code{outer.iter.end}: Number of outer iterations at convergence
-\item \code{conv}: Logical; TRUE if converged before maxit.ou
-\item \code{eps1}: Final value of convergence criterion (parameter difference)
+\item \code{iter.end}: Number of outer iterations at convergence
+\item \code{converged}: Logical; TRUE if converged before maxit.ou
+\item \code{tol.end}: Final value of convergence criterion (parameter difference)
 \item \code{time}: Wall clock computation time (in seconds)
 \item \code{nstart}: Number of random starts used
-\item \code{all.obj}: Vector of objective values from all starts (only when \code{nstart > 1})
+\item \code{all.obj}: Vector of objective values (Qp(B) + h(B,Phi)) from all starts (only when \code{nstart > 1})
 }
 }
 \description{

@@ -4,12 +4,12 @@
 \alias{fixB}
 \title{Fix sign indeterminacy in factor loadings}
 \usage{
-fixB(B, R_)
+fixB(B, R)
 }
 \arguments{
 \item{B}{Loading matrix (modified in place)}
 
-\item{R_}{Optional correlation matrix (modified in place). Defaults to identity.}
+\item{R}{Optional correlation matrix (modified in place). Defaults to identity.}
 }
 \description{
 Fix sign indeterminacy in factor loadings

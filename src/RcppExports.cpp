@@ -12,13 +12,13 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // fixB
-void fixB(arma::mat& B, Rcpp::Nullable<Rcpp::NumericMatrix> R_);
-RcppExport SEXP _bifacLpRot_fixB(SEXP BSEXP, SEXP R_SEXP) {
+void fixB(arma::mat& B, Rcpp::Nullable<Rcpp::NumericMatrix> R);
+RcppExport SEXP _bifacLpRot_fixB(SEXP BSEXP, SEXP RSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type B(BSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericMatrix> >::type R_(R_SEXP);
-    fixB(B, R_);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericMatrix> >::type R(RSEXP);
+    fixB(B, R);
     return R_NilValue;
 END_RCPP
 }
@@ -33,21 +33,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// commutation_matrix
-arma::mat commutation_matrix(int p, int q);
-RcppExport SEXP _bifacLpRot_commutation_matrix(SEXP pSEXP, SEXP qSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type p(pSEXP);
-    Rcpp::traits::input_parameter< int >::type q(qSEXP);
-    rcpp_result_gen = Rcpp::wrap(commutation_matrix(p, q));
-    return rcpp_result_gen;
-END_RCPP
-}
 // ALM_cpp
-Rcpp::List ALM_cpp(arma::mat& A, Rcpp::Nullable<arma::mat> Phi0_, Rcpp::Nullable<arma::mat> Bstart_, Rcpp::Nullable<arma::mat> Phi_, double rho, double t, int maxit_ou, int maxit_in, bool orthogonal, double tol1, double tol2, double tol3, bool verbose, int v_every, double Lmax, double c1, double c2, double p);
-RcppExport SEXP _bifacLpRot_ALM_cpp(SEXP ASEXP, SEXP Phi0_SEXP, SEXP Bstart_SEXP, SEXP Phi_SEXP, SEXP rhoSEXP, SEXP tSEXP, SEXP maxit_ouSEXP, SEXP maxit_inSEXP, SEXP orthogonalSEXP, SEXP tol1SEXP, SEXP tol2SEXP, SEXP tol3SEXP, SEXP verboseSEXP, SEXP v_everySEXP, SEXP LmaxSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP pSEXP) {
+Rcpp::List ALM_cpp(arma::mat& A, Rcpp::Nullable<arma::mat> Phi0_, Rcpp::Nullable<arma::mat> Bstart_, Rcpp::Nullable<arma::mat> Phi_, double rho, double t, int maxit_ou, int maxit_in, int maxit_bt, bool orthogonal, double tol1, double tol2, bool verbose, int v_every, double Lmax, double c1, double c2, double p);
+RcppExport SEXP _bifacLpRot_ALM_cpp(SEXP ASEXP, SEXP Phi0_SEXP, SEXP Bstart_SEXP, SEXP Phi_SEXP, SEXP rhoSEXP, SEXP tSEXP, SEXP maxit_ouSEXP, SEXP maxit_inSEXP, SEXP maxit_btSEXP, SEXP orthogonalSEXP, SEXP tol1SEXP, SEXP tol2SEXP, SEXP verboseSEXP, SEXP v_everySEXP, SEXP LmaxSEXP, SEXP c1SEXP, SEXP c2SEXP, SEXP pSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -59,17 +47,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type t(tSEXP);
     Rcpp::traits::input_parameter< int >::type maxit_ou(maxit_ouSEXP);
     Rcpp::traits::input_parameter< int >::type maxit_in(maxit_inSEXP);
+    Rcpp::traits::input_parameter< int >::type maxit_bt(maxit_btSEXP);
     Rcpp::traits::input_parameter< bool >::type orthogonal(orthogonalSEXP);
     Rcpp::traits::input_parameter< double >::type tol1(tol1SEXP);
     Rcpp::traits::input_parameter< double >::type tol2(tol2SEXP);
-    Rcpp::traits::input_parameter< double >::type tol3(tol3SEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< int >::type v_every(v_everySEXP);
     Rcpp::traits::input_parameter< double >::type Lmax(LmaxSEXP);
     Rcpp::traits::input_parameter< double >::type c1(c1SEXP);
     Rcpp::traits::input_parameter< double >::type c2(c2SEXP);
     Rcpp::traits::input_parameter< double >::type p(pSEXP);
-    rcpp_result_gen = Rcpp::wrap(ALM_cpp(A, Phi0_, Bstart_, Phi_, rho, t, maxit_ou, maxit_in, orthogonal, tol1, tol2, tol3, verbose, v_every, Lmax, c1, c2, p));
+    rcpp_result_gen = Rcpp::wrap(ALM_cpp(A, Phi0_, Bstart_, Phi_, rho, t, maxit_ou, maxit_in, maxit_bt, orthogonal, tol1, tol2, verbose, v_every, Lmax, c1, c2, p));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -77,7 +65,6 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_bifacLpRot_fixB", (DL_FUNC) &_bifacLpRot_fixB, 2},
     {"_bifacLpRot_freeR", (DL_FUNC) &_bifacLpRot_freeR, 1},
-    {"_bifacLpRot_commutation_matrix", (DL_FUNC) &_bifacLpRot_commutation_matrix, 2},
     {"_bifacLpRot_ALM_cpp", (DL_FUNC) &_bifacLpRot_ALM_cpp, 18},
     {NULL, NULL, 0}
 };
