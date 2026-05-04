@@ -2,15 +2,15 @@
 % Please edit documentation in R/RcppExports.R
 \name{fixB}
 \alias{fixB}
-\title{Fix sign indeterminacy in factor loadings}
+\title{Fix sign indeterminacy in factor loadings (USE WITH CARE)}
 \usage{
-fixB(B, R)
+fixB(B, R = NULL)
 }
 \arguments{
 \item{B}{Loading matrix (modified in place)}
 
-\item{R}{Optional correlation matrix (modified in place). Defaults to identity.}
+\item{R}{Optional correlation matrix (modified in place). Defaults to NULL.}
 }
 \description{
-Fix sign indeterminacy in factor loadings
+Fix sign indeterminacy in factor loadings (USE WITH CARE)
 }

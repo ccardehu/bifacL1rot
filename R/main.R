@@ -5,7 +5,7 @@
 #' @param Bstart Optional starting value for B matrix. Defaults to A.
 #'   Ignored when \code{nstart > 1}.
 #' @param Phi Optional starting correlation matrix. Defaults to identity.
-#' @param rho Initial penalty parameter for augmented Lagrangian method. Default 1.
+#' @param rho Initial penalty parameter for augmented Lagrangian method. Default 5.
 #' @param t Initial step size. Default 1e-3.
 #' @param maxit.ou Maximum outer iterations. Default 5000.
 #' @param maxit.in Maximum inner iterations. Default 300.
@@ -13,7 +13,7 @@
 # #' @param hesit Iteration number to add Hessian information. Default 50.
 #' @param orthogonal Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.
 #' @param tol1 Convergence tolerance for successive parameter change. Default 1e-6.
-#' @param tol2 Convergence tolerance for constraint violation check. Default 1e-4.
+#' @param tol2 Convergence tolerance for constraint violation check. Default 1e-3.
 #' @param verbose Logical; print progress. Default TRUE.
 #' @param v.every Print frequency (every v.every outer iterations). Default 10.
 #' @param Lmax Clipping bound for Lagrange multipliers. Default 20.
@@ -69,7 +69,7 @@
 bifactorLp <- function(A, Phi0 = NULL, Bstart = NULL, Phi = NULL, rho = 5, t = 1e-3,
                 maxit.ou = 5000, maxit.in = 300, maxit.bt = 20, #hesit = 50,
                 orthogonal = FALSE,
-                tol1 = 1e-6, tol2 = 1e-4, verbose = TRUE, v.every = 10L,
+                tol1 = 1e-6, tol2 = 1e-3, verbose = TRUE, v.every = 10L,
                 Lmax = 20, c1 = 1.05, c2 = 0.25, p = 1,
                 nstart = 1L, seed = NULL, ncores = 1) {
 

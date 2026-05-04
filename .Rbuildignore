@@ -1,3 +1,6 @@
-^bifacL1rot\.Rproj$
+^bifacLpRot\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^.*\.o$
+^.*\.so$
+^.*\.dll$

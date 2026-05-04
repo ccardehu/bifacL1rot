@@ -219,27 +219,30 @@ void fixB_internal(arma::mat& B,
     for (arma::uword i = 0; i < B.n_cols; ++i) {
         arma::uword max_idx = arma::abs(B.col(i)).index_max();
         signs(i) = (B(max_idx, i) >= 0) ? 1.0 : -1.0;
+        // signs(i) = ((B(max_idx, i) >= 0) && (arma::accu(B.col(i)) > 0.0)) ? 1.0 : -1.0;
         // signs(i) = (arma::accu(B.col(i)) >= 0) ? 1.0 : -1.0;
         B.col(i) *= signs(i);
     }
     R.each_col() %= signs;
     R.each_row() %= signs.t();
+    // R %= (signs * signs.t());
     R.diag().ones();
 }
 
-//' Fix sign indeterminacy in factor loadings
+//' Fix sign indeterminacy in factor loadings (USE WITH CARE)
 //'
 //' @param B Loading matrix (modified in place)
-//' @param R Optional correlation matrix (modified in place). Defaults to identity.
+//' @param R Optional correlation matrix (modified in place). Defaults to NULL.
 //' @export
 // [[Rcpp::export]]
 void fixB(arma::mat& B,
-          Rcpp::Nullable<Rcpp::NumericMatrix> R) {
+          Rcpp::Nullable<Rcpp::NumericMatrix> R = R_NilValue) {
 
      arma::vec signs(B.n_cols);
      for (arma::uword i = 0; i < B.n_cols; ++i) {
          arma::uword max_idx = arma::abs(B.col(i)).index_max();
          signs(i) = (B(max_idx, i) >= 0) ? 1.0 : -1.0;
+         // signs(i) = ((B(max_idx, i) >= 0) && (arma::accu(B.col(i)) > 0.0)) ? 1.0 : -1.0;
          // signs(i) = (arma::accu(B.col(i)) >= 0) ? 1.0 : -1.0;
          B.col(i) *= signs(i);
      }
@@ -248,6 +251,7 @@ void fixB(arma::mat& B,
          arma::mat Ri(Rmat.begin(), Rmat.nrow(), Rmat.ncol(), false, true);
          Ri.each_col() %= signs;
          Ri.each_row() %= signs.t();
+         // Ri %= (signs * signs.t());
          Ri.diag().ones();
      }
  }
@@ -332,7 +336,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
                    double rho = 5.0, double t = 1e-3,
                    int maxit_ou = 5000, int maxit_in = 300, int maxit_bt = 20, //int hesit = 50,
                    bool orthogonal = false,
-                   double tol1 = 1e-6, double tol2 = 1e-4,
+                   double tol1 = 1e-6, double tol2 = 1e-3,
                    bool verbose = true, int v_every = 10,
                    double Lmax = 20.0, double c1 = 1.05, double c2 = 0.25,
                    double p = 1) {
@@ -347,6 +351,7 @@ Rcpp::List ALM_cpp(arma::mat& A,
     arma::mat B = Bstart_.isNotNull() ? Rcpp::as<arma::mat>(Bstart_) : A;
     arma::mat Phi = Phi_.isNotNull() ? Rcpp::as<arma::mat>(Phi_) : arma::eye(B.n_cols, B.n_cols);
     fixPhi(Phi);
+    fixB_internal(B, Phi);
     arma::mat R = arma::chol(Phi, "lower");
 
     // Initialize Lagrange multipliers
@@ -425,7 +430,6 @@ Rcpp::List ALM_cpp(arma::mat& A,
             R = Rn;
             if (stopC0 < tol1) break;
         }
-
         Phi = R * R.t();
 
         // Update Lagrange multipliers

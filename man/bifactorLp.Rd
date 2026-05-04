@@ -16,7 +16,7 @@ bifactorLp(
   maxit.bt = 20,
   orthogonal = FALSE,
   tol1 = 1e-06,
-  tol2 = 1e-04,
+  tol2 = 0.001,
   verbose = TRUE,
   v.every = 10L,
   Lmax = 20,
@@ -38,7 +38,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{Phi}{Optional starting correlation matrix. Defaults to identity.}
 
-\item{rho}{Initial penalty parameter for augmented Lagrangian method. Default 1.}
+\item{rho}{Initial penalty parameter for augmented Lagrangian method. Default 5.}
 
 \item{t}{Initial step size. Default 1e-3.}
 
@@ -52,7 +52,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{tol1}{Convergence tolerance for successive parameter change. Default 1e-6.}
 
-\item{tol2}{Convergence tolerance for constraint violation check. Default 1e-4.}
+\item{tol2}{Convergence tolerance for constraint violation check. Default 1e-3.}
 
 \item{verbose}{Logical; print progress. Default TRUE.}
 
