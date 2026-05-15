@@ -6,24 +6,26 @@
 \usage{
 bifactorLp(
   A,
-  Phi0 = NULL,
-  Bstart = NULL,
   Phi = NULL,
-  rho = 5,
+  B_start = NULL,
+  Phi_start = NULL,
+  rho1 = 10,
   t = 0.001,
-  maxit.ou = 5000,
-  maxit.in = 300,
-  maxit.bt = 20,
+  maxit_ou = 5000,
+  maxit_in = 300,
+  maxit_bt = 20,
   orthogonal = FALSE,
   tol1 = 1e-06,
   tol2 = 0.001,
+  tol3 = 0.001,
   verbose = TRUE,
-  v.every = 10L,
+  v_every = 10L,
   Lmax = 20,
   c1 = 1.05,
   c2 = 0.25,
   p = 1,
   nstart = 1L,
+  ostart = TRUE,
   seed = NULL,
   ncores = 1
 )
@@ -31,36 +33,38 @@ bifactorLp(
 \arguments{
 \item{A}{Input factor loading matrix (J x K)}
 
-\item{Phi0}{Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.}
+\item{Phi}{Optional estimated correlation matrix (if A comes from oblique rotation). Defaults to identity.}
 
-\item{Bstart}{Optional starting value for B matrix. Defaults to A.
+\item{B_start}{Optional starting value for B matrix. Defaults to A.
 Ignored when \code{nstart > 1}.}
 
-\item{Phi}{Optional starting correlation matrix. Defaults to identity.}
+\item{Phi_start}{Optional starting correlation matrix. Defaults to identity.}
 
-\item{rho}{Initial penalty parameter for augmented Lagrangian method. Default 5.}
+\item{rho1}{Initial penalty parameter for augmented Lagrangian method (L). Default 10.}
 
 \item{t}{Initial step size. Default 1e-3.}
 
-\item{maxit.ou}{Maximum outer iterations. Default 5000.}
+\item{maxit_ou}{Maximum outer iterations. Default 5000.}
 
-\item{maxit.in}{Maximum inner iterations. Default 300.}
+\item{maxit_in}{Maximum inner iterations. Default 300.}
 
-\item{maxit.bt}{Maximum back-tracking iterations. Default 20.}
+\item{maxit_bt}{Maximum back-tracking iterations. Default 20.}
 
 \item{orthogonal}{Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.}
 
-\item{tol1}{Convergence tolerance for successive parameter change. Default 1e-6.}
+\item{tol1}{Convergence tolerance for successive parameter change (outer loop). Default 1e-6.}
 
-\item{tol2}{Convergence tolerance for constraint violation check. Default 1e-3.}
+\item{tol2}{Convergence tolerance for successive parameter change (inner loop). Default 1e-3.}
+
+\item{tol3}{Convergence tolerance for constraint violation check. Default 1e-3.}
 
 \item{verbose}{Logical; print progress. Default TRUE.}
 
-\item{v.every}{Print frequency (every v.every outer iterations). Default 10.}
+\item{v_every}{Print frequency (every v_every outer iterations). Default 10.}
 
 \item{Lmax}{Clipping bound for Lagrange multipliers. Default 20.}
 
-\item{c1}{Multiplicative factor for rho increase (must be > 1). Default 1.05.}
+\item{c1}{Multiplicative factor for rho1 and rho2 increase (must be > 1). Default 1.05.}
 
 \item{c2}{Threshold for rho update (must be in (0,1)). Default 0.25.}
 
@@ -69,6 +73,8 @@ Ignored when \code{nstart > 1}.}
 \item{nstart}{Number of random starts. Default 1 (no random restarts).
 When \code{nstart > 1}, each start uses a random orthogonal rotation of \code{A}
 and the solution with the smallest objective value is returned.}
+
+\item{ostart}{Logical; orthogonal rotation for random starts? Default TRUE.}
 
 \item{seed}{Optional integer seed for reproducibility of random starts. Default NULL.}
 
@@ -83,9 +89,9 @@ A list containing:
 \item \code{Phi}: Estimated factor correlation matrix (follows a bi-factor structure)
 \item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
 \item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
-\item \code{rho.end}: Final value of rho
+\item \code{rho1.end}: Final value of rho1
 \item \code{iter.end}: Number of outer iterations at convergence
-\item \code{converged}: Logical; TRUE if converged before maxit.ou
+\item \code{converged}: Logical; TRUE if converged before maxit_ou
 \item \code{tol.end}: Final value of convergence criterion (parameter difference)
 \item \code{time}: Wall clock computation time (in seconds)
 \item \code{nstart}: Number of random starts used

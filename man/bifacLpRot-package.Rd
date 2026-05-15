@@ -21,6 +21,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Camilo A. Cárdenas-Hurtado \email{c.a.cardenas-hurtado@lse.ac.uk} (\href{https://orcid.org/0009-0003-1073-0912}{ORCID})
   \item Tamara Gaia Vasiljev \email{t.vasiljev@campus.unimib.it} [contributor]
 }
 
