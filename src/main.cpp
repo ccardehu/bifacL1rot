@@ -225,6 +225,7 @@ void stdM(arma::mat& B){
 
 void fixB_internal(arma::mat& B,
                    arma::mat& R) {
+    // stdM(B);
     arma::vec signs(B.n_cols);
     for (arma::uword i = 0; i < B.n_cols; ++i) {
         arma::uword max_idx = arma::abs(B.col(i)).index_max();
@@ -283,6 +284,7 @@ void bt4B(arma::mat& B, arma::mat& Bn, arma::mat& R, arma::mat& L, //arma::vec& 
     for (int i = 0; i < maxit_bt; ++i) {
         Bn = B - t * grad;
         Bn.cols(1, B.n_cols - 1) = ProxB(Bn.cols(1, B.n_cols - 1), lam);
+        // stdM(Bn) ;
 
         // Quadratic upper bound check smooth h(B,Phi) when p == 1 (i.e., convex)
         arma::mat diff = Bn - B;
@@ -334,13 +336,13 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
                    Rcpp::Nullable<arma::mat> Phi0_ = R_NilValue,
                    Rcpp::Nullable<arma::mat> Bstart_ = R_NilValue,
                    Rcpp::Nullable<arma::mat> Phistart_ = R_NilValue,
-                   double rho1 = 10, //double rho2 = 1, double kappa = 0.1,
+                   double rho = 10,
                    double t = 1e-3,
                    int maxit_ou = 5000, int maxit_in = 300, int maxit_bt = 20, //int hesit = 50,
                    bool orthogonal = false,
                    double tol1 = 1e-6, double tol2 = 1e-3, double tol3 = 1e-3,
                    bool verbose = true, int v_every = 10,
-                   double Lmax = 20.0, double c1 = 1.05, double c2 = 0.25,
+                   double Lmax = 20.0, double c1 = 1.1, double c2 = 0.25,
                    double p = 1) {
 
     // Input validation
@@ -359,12 +361,9 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
     fixB_internal(B, Phi);
     fixB_internal(A0, Phi0);
     arma::mat R = arma::chol(Phi, "lower");
-    arma::mat R0 = arma::chol(Phi0, "lower");
 
     // Initialize Lagrange multipliers
     arma::mat L(B.n_rows, B.n_rows, arma::fill::zeros);
-    // arma::vec mu(B.n_cols, arma::fill::zeros);
-    // arma::vec v1(B.n_cols, arma::fill::value(kappa));
 
     // Number of parameters (for scaling)
     int NR = orthogonal ? 0 : static_cast<int>(freeR(R).n_elem) - 1;
@@ -372,9 +371,8 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
 
     // const arma::mat Kpq = commutation_matrix(B.n_rows, B.n_cols);
     const arma::mat AAt = A0 * Phi0 * A0.t();
-
-    double outo = Qp(A0,p);
     double outn = Qp(B,p);
+
     if (verbose) {
         Rcpp::Rcout << "\n Qp(B) (iter: 0): " << std::fixed << std::setprecision(3) << outn;
     }
@@ -419,8 +417,8 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
             double critR0 = 0.0;
 
             // in-place backtracking fix for Bn
-            arma::mat gradb = gradB(B, R, L, AAt, rho1);
-            bt4B(B, Bn, R, L, AAt, rho1, gradb, tB, p, ProxB, maxit_bt, 0.5);
+            arma::mat gradb = gradB(B, R, L, AAt, rho);
+            bt4B(B, Bn, R, L, AAt, rho, gradb, tB, p, ProxB, maxit_bt, 0.5);
 
             if (!Bn.is_finite()) {
                 Rcpp::stop("Check B at iter: %i, inner: %i", i+1, j+1);
@@ -428,8 +426,8 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
 
             if (!orthogonal) {
                 // in-place backtracking fix for Rn
-                arma::mat gradr = gradR(B, R, L, AAt, rho1);
-                bt4R(B, R, Rn, L, AAt, rho1, gradr, tR, maxit_bt, 0.5);
+                arma::mat gradr = gradR(B, R, L, AAt, rho);
+                bt4R(B, R, Rn, L, AAt, rho, gradr, tR, maxit_bt, 0.5);
 
                 if (!Rn.is_finite()) {
                     Rcpp::stop("Check R at iter: %i, inner: %i", i+1, j+1);
@@ -445,12 +443,9 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
         Phi = R * R.t();
 
         // Update Lagrange multipliers
-        L += rho1 * (AAt - B * Phi * B.t());
+        L += rho * (AAt - B * Phi * B.t());
         L = 0.5 * (L + L.t());
         L = arma::clamp(L, -Lmax, Lmax);
-        // mu += rho2 * (arma::diagvec(B.t() * B) - v1) ;
-        // mu = arma::clamp(mu, -Lmax, Lmax);
-
         outn = Qp(B,p);
 
         if (verbose && (i % v_every == 0)) {
@@ -460,29 +455,20 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
 
         critR1 = orthogonal ? 0.0 : arma::accu(arma::square(freeR(R) - freeR(Ro)));
         stopC1 = (arma::accu(arma::square(B - Bo)) + critR1) / NP;
-
         double resid_new = arma::norm(AAt - B * Phi * B.t(), "fro");
-        double resid_old = arma::norm(AAt - Bo * Phio * Bo.t(), "fro");
-
-        // double unitc_new = arma::norm(arma::diagvec(B.t()*B) - v1, 2);
-        // double unitc_old = arma::norm(arma::diagvec(Bo.t()*Bo) - v1, 2);
 
         if ((std::sqrt(stopC1) < tol1) && (resid_new < tol3)){ //   && (unitc_new < tol3)
             converged = true;
             break;
         }
-        // if ((stopC1 < tol1)) break;
 
         // Adaptive rho update
-        if (resid_new < c2 * resid_old) rho1 = std::min(rho1*c1, 1e4);
-        // if (unitc_new < c2 * unitc_old) rho2 = std::min(rho2*c1, 1e4);
-
-
+        double resid_old = arma::norm(AAt - Bo * Phio * Bo.t(), "fro");
+        if (resid_new < c2 * resid_old) rho = std::min(rho*c1, 1e5);
     }
 
     // Final sign fix
     fixB_internal(B, Phi);
-    // fixB_internal(B, Phi, false);
 
     if (verbose) {
         Rcpp::Rcout << "\r Qp(B) (outer iter: " << i+1 << "): " << std::fixed
@@ -494,13 +480,10 @@ Rcpp::List ALM_cpp(Rcpp::Nullable<arma::mat> A0_,
         Rcpp::Named("Phi") = Phi,
         Rcpp::Named("R") = R,
         Rcpp::Named("obj.end") = outn,
-        Rcpp::Named("cons1.end") = arma::norm(AAt - B*Phi*B.t(), "fro"),
-        // Rcpp::Named("cons2.end") = arma::norm(arma::diagvec(B.t()*B) - v1, 2),
-        Rcpp::Named("rho1.end") = rho1,
-        // Rcpp::Named("rho2.end") = rho2,
-        Rcpp::Named("iter.end") = i,
-        Rcpp::Named("converged") = converged,
+        Rcpp::Named("cons.end") = arma::norm(AAt - B*Phi*B.t(), "fro"),
         Rcpp::Named("tol.end") = std::sqrt(stopC1),
-        Rcpp::Named("obj.org") = outo
+        Rcpp::Named("rho.end") = rho,
+        Rcpp::Named("iter.end") = i,
+        Rcpp::Named("converged") = converged
     );
 }

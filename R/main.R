@@ -5,8 +5,7 @@
 #' @param B_start Optional starting value for B matrix. Defaults to A.
 #'   Ignored when \code{nstart > 1}.
 #' @param Phi_start Optional starting correlation matrix. Defaults to identity.
-#' @param rho1 Initial penalty parameter for augmented Lagrangian method (L). Default 10.
-# @param rho2 Initial penalty parameter for augmented Lagrangian method (mu). Default 10.
+#' @param rho Initial penalty parameter for augmented Lagrangian method (L). Default 10.
 #' @param t Initial step size. Default 1e-3.
 #' @param maxit_ou Maximum outer iterations. Default 5000.
 #' @param maxit_in Maximum inner iterations. Default 300.
@@ -14,12 +13,12 @@
 # @param hesit Iteration number to add Hessian information. Default 50.
 #' @param orthogonal Logical; if TRUE, constrains factors to be orthogonal. Default FALSE.
 #' @param tol1 Convergence tolerance for successive parameter change (outer loop). Default 1e-6.
-#' @param tol2 Convergence tolerance for successive parameter change (inner loop). Default 1e-3.
+#' @param tol2 Convergence tolerance for successive parameter change (inner loop). Default 1e-4.
 #' @param tol3 Convergence tolerance for constraint violation check. Default 1e-3.
 #' @param verbose Logical; print progress. Default TRUE.
 #' @param v_every Print frequency (every v_every outer iterations). Default 10.
 #' @param Lmax Clipping bound for Lagrange multipliers. Default 20.
-#' @param c1 Multiplicative factor for rho1 and rho2 increase (must be > 1). Default 1.05.
+#' @param c1 Multiplicative factor for rho increase (must be > 1). Default 1.1.
 #' @param c2 Threshold for rho update (must be in (0,1)). Default 0.25.
 #' @param p Exponent in Qp (must be in (0,1]). Closed form solutions for 1/2, 2/3, 1. Default 1.
 #' @param nstart Number of random starts. Default 1 (no random restarts).
@@ -35,29 +34,30 @@
 #' \itemize{
 #'   \item \code{B}: Estimated factor loading matrix (follows a bi-factor structure)
 #'   \item \code{Phi}: Estimated factor correlation matrix (follows a bi-factor structure)
-#'   \item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
-#'   \item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
-#'   \item \code{rho1.end}: Final value of rho1
-#   \item \code{rho2.end}: Final value of rho2
+#'   \item \code{obj.end}: objective function Qp(B) evaluated at rotated solution (B,Phi)
+#'   \item \code{cons.end}: Value of the constraint h(B,Phi) at solution (B,Phi)
+#'   \item \code{tol.end}: Final value of convergence criterion (parameter difference)
+#'   \item \code{rho.end}: Final value of rho
 #'   \item \code{iter.end}: Number of outer iterations at convergence
 #'   \item \code{converged}: Logical; TRUE if converged before maxit_ou
-#'   \item \code{tol.end}: Final value of convergence criterion (parameter difference)
 #'   \item \code{time}: Wall clock computation time (in seconds)
 #'   \item \code{nstart}: Number of random starts used
-#'   \item \code{all.obj}: Vector of objective values (Qp(B) + h(B,Phi)) from all starts (only when \code{nstart > 1})
+#'   \item \code{all.obj}: Vector of objective values Qp(B) from all starts (only when \code{nstart > 1})
+#'   \item \code{all.cons}: Vector of constraint values h(B,Phi) from all starts (only when \code{nstart > 1})
 #' }
 #'
 #' @examples
 #' \dontrun{
 #' set.seed(1234)
 #' A <- matrix(0, 20, 4) # A 20 x 4 Factor loading matrix
-#' A[,1] = runif(20, 1, 2) # Bi-factor structure, first factor
-#' A[,2] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
-#' A[,3] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
-#' A[,4] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
+#' A[,1] = runif(20, 0, 2) # Bi-factor structure, first factor
+#' A[,2] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
+#' A[,3] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
+#' A[,4] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
 #'
-#' # Create rotation matrix (via random matrix):
-#' Tr = Tr = qr.Q(qr(matrix(rnorm(ncol(A) * ncol(A)), ncol(A), ncol(A))))
+#' # Create orthogonal bi-factor rotation matrix (via random matrix):
+#' Tr = qr.Q(qr(matrix(rnorm((ncol(A)-1) * (ncol(A)-1)), ncol(A)-1, ncol(A)-1)))
+#' Tr = rbind(c(1, rep(0, ncol(A)-1)), cbind(rep(0, ncol(A)-1), Tr))
 #' Ah = (A)%*%(Tr)
 #'
 #' # Single start
@@ -71,12 +71,12 @@
 #' @useDynLib bifacLpRot, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
-                       rho1 = 10, t = 1e-3,
+                       rho = 10, t = 1e-3,
                        maxit_ou = 5000, maxit_in = 300, maxit_bt = 20, #hesit = 50,
                        orthogonal = FALSE,
                        tol1 = 1e-6, tol2 = 1e-3, tol3 = 1e-3,
                        verbose = TRUE, v_every = 10L,
-                       Lmax = 20, c1 = 1.05, c2 = 0.25, p = 1,
+                       Lmax = 20, c1 = 1.1, c2 = 0.25, p = 1,
                        nstart = 1L, ostart = TRUE, seed = NULL, ncores = 1) {
 
     # Input validation
@@ -122,8 +122,7 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
             Phi0_ = Phi,
             Bstart_ = B_start,
             Phistart_ = Phi_start,
-            rho1 = rho1,
-            # rho2 = rho2,
+            rho = rho,
             t = t,
             maxit_ou = maxit_ou,
             maxit_in = maxit_in,
@@ -146,7 +145,7 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
 
     # --- Multiple random starts ---
     if (is.null(B_start)) {
-        message(sprintf("B_start is NULL; (nstart = %d) random rotations of A are used as starting points instead.", nstart))
+        message(sprintf("B_start is NULL; (nstart = %d) random orthogonal bi-factor rotations of initial factor loading matrix are used as starting points.", nstart))
         B_start = as.matrix(A)
     }
 
@@ -187,8 +186,7 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
                 Phi0_ = Phi,
                 Bstart_ = Bs,
                 Phistart_ = Phi_start,
-                rho1 = rho1,
-                # rho2 = rho2,
+                rho = rho,
                 t = t,
                 maxit_ou = maxit_ou,
                 maxit_in = maxit_in,
@@ -237,7 +235,7 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
 
     # Select best result (lowest objective; Qp + constraint violation)
     obj_vals = vapply(results, function(r) r$obj.end, numeric(1))
-    con_vals = vapply(results, function(r) r$cons1.end, numeric(1))
+    con_vals = vapply(results, function(r) r$cons.end, numeric(1))
     best_idx = which.min(obj_vals)
     best = results[[best_idx]]
 
@@ -246,14 +244,13 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
                         nstart, obj_vals[best_idx], con_vals[best_idx], best_idx, min(obj_vals), max(obj_vals)))
     }
 
-    if (!best$converged & F){
+    if (!best$converged){
         ref = ALM_cpp(
             A0_ = best$B,
             Phi0_ = best$Phi,
             Bstart_ = best$B,
             Phistart_ = best$Phi,
-            rho1 = best$rho1.end,
-            # rho2 = best$rho2.end,
+            rho = rho,
             t = t,
             maxit_ou = maxit_ou,
             maxit_in = maxit_in,
@@ -273,11 +270,11 @@ bifactorLp <- function(A, Phi = NULL, B_start = NULL, Phi_start = NULL,
         ref$nstart = nstart + 1L
         toc = Sys.time()
         ref$all.obj = c(obj_vals, ref$obj.end)
-        ref$all.con = c(con_vals, ref$cons1.end)
+        ref$all.con = c(con_vals, ref$cons.end)
         ref$time = difftime(toc,tic,units = "secs")
         if(verbose) {
-            message(sprintf("Refined from best iteration: Qp(B): %.3f; h(B,Phi): %.3f | Qp(A): %.3f",
-                            ref$obj.end, ref$cons1.end, ref$obj.org))
+            message(sprintf("Refined from best solution: Qp(B): %.3f; h(B,Phi): %.3f",
+                            ref$obj.end, ref$cons.end))
         }
         return(ref)
     }

@@ -9,7 +9,7 @@ bifactorLp(
   Phi = NULL,
   B_start = NULL,
   Phi_start = NULL,
-  rho1 = 10,
+  rho = 10,
   t = 0.001,
   maxit_ou = 5000,
   maxit_in = 300,
@@ -21,7 +21,7 @@ bifactorLp(
   verbose = TRUE,
   v_every = 10L,
   Lmax = 20,
-  c1 = 1.05,
+  c1 = 1.1,
   c2 = 0.25,
   p = 1,
   nstart = 1L,
@@ -40,7 +40,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{Phi_start}{Optional starting correlation matrix. Defaults to identity.}
 
-\item{rho1}{Initial penalty parameter for augmented Lagrangian method (L). Default 10.}
+\item{rho}{Initial penalty parameter for augmented Lagrangian method (L). Default 10.}
 
 \item{t}{Initial step size. Default 1e-3.}
 
@@ -54,7 +54,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{tol1}{Convergence tolerance for successive parameter change (outer loop). Default 1e-6.}
 
-\item{tol2}{Convergence tolerance for successive parameter change (inner loop). Default 1e-3.}
+\item{tol2}{Convergence tolerance for successive parameter change (inner loop). Default 1e-4.}
 
 \item{tol3}{Convergence tolerance for constraint violation check. Default 1e-3.}
 
@@ -64,7 +64,7 @@ Ignored when \code{nstart > 1}.}
 
 \item{Lmax}{Clipping bound for Lagrange multipliers. Default 20.}
 
-\item{c1}{Multiplicative factor for rho1 and rho2 increase (must be > 1). Default 1.05.}
+\item{c1}{Multiplicative factor for rho increase (must be > 1). Default 1.1.}
 
 \item{c2}{Threshold for rho update (must be in (0,1)). Default 0.25.}
 
@@ -87,15 +87,16 @@ A list containing:
 \itemize{
 \item \code{B}: Estimated factor loading matrix (follows a bi-factor structure)
 \item \code{Phi}: Estimated factor correlation matrix (follows a bi-factor structure)
-\item \code{obj.end}: objective function (Qp(B)) evaluated at rotated solution (B,Phi)
-\item \code{cons.end}: Value of the constraint (h(B,Phi)) at solution (B,Phi)
-\item \code{rho1.end}: Final value of rho1
+\item \code{obj.end}: objective function Qp(B) evaluated at rotated solution (B,Phi)
+\item \code{cons.end}: Value of the constraint h(B,Phi) at solution (B,Phi)
+\item \code{tol.end}: Final value of convergence criterion (parameter difference)
+\item \code{rho.end}: Final value of rho
 \item \code{iter.end}: Number of outer iterations at convergence
 \item \code{converged}: Logical; TRUE if converged before maxit_ou
-\item \code{tol.end}: Final value of convergence criterion (parameter difference)
 \item \code{time}: Wall clock computation time (in seconds)
 \item \code{nstart}: Number of random starts used
-\item \code{all.obj}: Vector of objective values (Qp(B) + h(B,Phi)) from all starts (only when \code{nstart > 1})
+\item \code{all.obj}: Vector of objective values Qp(B) from all starts (only when \code{nstart > 1})
+\item \code{all.cons}: Vector of constraint values h(B,Phi) from all starts (only when \code{nstart > 1})
 }
 }
 \description{
@@ -105,13 +106,14 @@ Lp rotation for Generalized Bi-factor Models
 \dontrun{
 set.seed(1234)
 A <- matrix(0, 20, 4) # A 20 x 4 Factor loading matrix
-A[,1] = runif(20, 1, 2) # Bi-factor structure, first factor
-A[,2] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
-A[,3] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
-A[,4] = runif(20, 0.5, 1) * rbinom(20, 1, 0.25)
+A[,1] = runif(20, 0, 2) # Bi-factor structure, first factor
+A[,2] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
+A[,3] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
+A[,4] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
 
-# Create rotation matrix (via random matrix):
-Tr = Tr = qr.Q(qr(matrix(rnorm(ncol(A) * ncol(A)), ncol(A), ncol(A))))
+# Create orthogonal bi-factor rotation matrix (via random matrix):
+Tr = qr.Q(qr(matrix(rnorm((ncol(A)-1) * (ncol(A)-1)), ncol(A)-1, ncol(A)-1)))
+Tr = rbind(c(1, rep(0, ncol(A)-1)), cbind(rep(0, ncol(A)-1), Tr))
 Ah = (A)\%*\%(Tr)
 
 # Single start
