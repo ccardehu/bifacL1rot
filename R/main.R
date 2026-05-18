@@ -50,10 +50,10 @@
 #' \dontrun{
 #' set.seed(1234)
 #' A <- matrix(0, 20, 4) # A 20 x 4 Factor loading matrix
-#' A[,1] = runif(20, 0, 2) # Bi-factor structure, first factor
-#' A[,2] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
-#' A[,3] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
-#' A[,4] = runif(20, 0, 2) * rbinom(20, 1, 0.25)
+#' A[,1] = runif(20, 0, 1) # Bi-factor structure, first factor
+#' A[,2] = runif(20, 0, 1) * rbinom(20, 1, 1/3)
+#' A[,3] = runif(20, 0, 1) * rbinom(20, 1, 1/3)
+#' A[,4] = runif(20, 0, 1) * rbinom(20, 1, 1/3)
 #'
 #' # Create orthogonal bi-factor rotation matrix (via random matrix):
 #' Tr = qr.Q(qr(matrix(rnorm((ncol(A)-1) * (ncol(A)-1)), ncol(A)-1, ncol(A)-1)))
